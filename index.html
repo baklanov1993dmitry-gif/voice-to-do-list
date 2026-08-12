@@ -125,7 +125,7 @@
   .full-body { flex: 1; overflow-y: auto; padding: 0 16px 16px; -webkit-overflow-scrolling: touch; }
 
   /* ---- Поиск и фильтр по категориям ---- */
-  .filter-bar { padding: 0 16px 10px; flex-shrink: 0; }
+  .filter-bar { padding: 14px 16px 14px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
   #searchInput {
     width: 100%; font-size: 15px; font-family: inherit; padding: 10px 14px;
     border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
@@ -602,13 +602,25 @@
       }
       const row = renderEntryRow(entry, false, { selectable: true, wrap: true });
 
+      // Записи без ID (самые старые, до системы ID) нельзя безопасно выделять/удалять/
+      // редактировать — пропускаем эту логику для них, пока не запущено "Оформить таблицу".
+      if (!entry.id) { group.appendChild(row); return; }
+
       let pressTimer = null;
+      let longPressFired = false; // клик, идущий следом за долгим тапом, нужно проигнорировать —
+                                   // иначе он тут же отменяет только что сделанное выделение
       row.addEventListener('pointerdown', () => {
-        pressTimer = setTimeout(() => { enterSelectMode(); toggleSelect(row, entry.id); }, 500);
+        longPressFired = false;
+        pressTimer = setTimeout(() => {
+          longPressFired = true;
+          enterSelectMode();
+          toggleSelect(row, entry.id);
+        }, 500);
       });
       row.addEventListener('pointerup', () => clearTimeout(pressTimer));
       row.addEventListener('pointerleave', () => clearTimeout(pressTimer));
       row.addEventListener('click', () => {
+        if (longPressFired) { longPressFired = false; return; }
         if (selectMode) { toggleSelect(row, entry.id); }
         else { openEdit(entry); }
       });
