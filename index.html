@@ -12,7 +12,7 @@
   :root {
     --bg: #1c1b19; --surface: #2c2c2a; --surface-2: #242422; --border: #3a3934;
     --text-primary: #f1efe8; --text-secondary: #b4b2a9; --text-muted: #5f5e5a;
-    --accent: #d85a30; --on-accent: #4a1b0c;
+    --accent: #d85a30; --on-accent: #4a1b0c; --danger: #e05a4e;
     --font-body: -apple-system, Roboto, "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -21,16 +21,17 @@
     background: var(--bg); color: var(--text-primary); font-family: var(--font-body);
     display: flex; flex-direction: column;
     padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
-    min-height: 100vh; transition: background 0.15s, color 0.15s;
+    min-height: 100vh;
   }
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .header h1 { font-size: 15px; font-weight: 500; margin: 0; color: var(--text-secondary); }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .header h1 { font-size: 21px; font-weight: 700; margin: 0; color: var(--text-primary); }
   .icon-btn {
-    background: none; border: none; color: var(--text-muted); padding: 6px;
-    cursor: pointer; display: flex; align-items: center; border-radius: 8px;
+    background: none; border: none; color: var(--text-secondary); padding: 8px;
+    cursor: pointer; display: flex; align-items: center; border-radius: 10px;
   }
   .icon-btn:active { background: var(--surface); }
-  .icon-btn svg { width: 20px; height: 20px; }
+  .icon-btn svg { width: 26px; height: 26px; }
+  .icon-btn.small svg { width: 22px; height: 22px; }
 
   /* ---- Статистика ---- */
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
@@ -43,9 +44,9 @@
   .stat-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin: 0 0 4px; }
   .stat-value { font-size: 26px; font-weight: 600; margin: 0; color: var(--text-primary); }
 
-  /* ---- Поле ввода — компактное ---- */
+  /* ---- Поле ввода ---- */
   textarea {
-    width: 100%; min-height: 64px; font-size: 16px; line-height: 1.4; font-family: inherit;
+    width: 100%; min-height: 100px; font-size: 16px; line-height: 1.4; font-family: inherit;
     padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; resize: none;
     outline: none; background: transparent; color: var(--text-primary); margin-bottom: 10px;
   }
@@ -62,22 +63,25 @@
 
   #status { font-size: 14px; min-height: 18px; margin-bottom: 10px; color: var(--text-secondary); }
 
-  /* ---- Последние записи (крупнее) ---- */
+  /* ---- Последние записи ---- */
   .section-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin: 4px 0 8px; }
   .entry-row {
     display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border);
   }
-  .entry-when { display: flex; flex-direction: column; min-width: 62px; }
-  .entry-date { font-size: 12px; color: var(--text-muted); }
-  .entry-time { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+  .entry-when { display: flex; flex-direction: column; gap: 2px; min-width: 66px; }
+  .entry-date { font-size: 11px; color: var(--text-muted); }
+  .time-badge {
+    display: inline-block; font-size: 12px; font-weight: 600; color: var(--accent);
+    background: var(--surface-2); padding: 2px 7px; border-radius: 7px; white-space: nowrap; width: fit-content;
+  }
   .entry-desc { flex: 1; font-size: 15px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .entry-hours { font-size: 14px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
-  .badge { background: var(--surface-2); color: var(--accent); font-size: 11px; padding: 2px 7px; border-radius: 7px; white-space: nowrap; }
+  .entry-desc.wrap { white-space: normal; text-overflow: clip; }
+  .entry-hours { font-size: 14px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
   .empty-note { font-size: 14px; color: var(--text-muted); padding: 10px 0; }
 
   .hint { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
 
-  /* ---- Панель настроек (снизу) ---- */
+  /* ---- Панель настроек ---- */
   .overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     display: none; align-items: flex-end; justify-content: center; z-index: 10;
@@ -108,23 +112,90 @@
     border-radius: 12px; background: none; color: var(--text-primary); font-size: 15px; cursor: pointer;
   }
 
-  /* ---- Полноэкранный список всех записей ---- */
+  /* ---- Полноэкранные экраны (список, редактирование) ---- */
   .full-overlay {
     position: fixed; inset: 0; background: var(--bg); z-index: 20; display: none; flex-direction: column;
   }
   .full-overlay.open { display: flex; }
   .full-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: calc(16px + env(safe-area-inset-top)) 16px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; gap: 8px;
+    padding: calc(14px + env(safe-area-inset-top)) 10px 14px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
   }
-  .full-header h2 { margin: 0; font-size: 16px; font-weight: 500; }
+  .full-header h2 { margin: 0; font-size: 17px; font-weight: 600; flex: 1; }
   .full-body { flex: 1; overflow-y: auto; padding: 0 16px 16px; -webkit-overflow-scrolling: touch; }
-  .day-group { margin-top: 14px; }
+
+  /* ---- Поиск и фильтр по категориям ---- */
+  .filter-bar { padding: 0 16px 10px; flex-shrink: 0; }
+  #searchInput {
+    width: 100%; font-size: 15px; font-family: inherit; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    color: var(--text-primary); margin-bottom: 8px;
+  }
+  #searchInput::placeholder { color: var(--text-muted); }
+  .chip-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .chip {
+    flex-shrink: 0; font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-secondary); cursor: pointer; white-space: nowrap; font-family: inherit;
+  }
+  .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  /* ---- Бейдж категории (цвет свой для каждой категории) ---- */
+  .cat-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 7px; white-space: nowrap; }
+
+  /* ---- Плавное появление новой записи ---- */
+  @keyframes entryIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .entry-row.enter { animation: entryIn 0.25s ease-out; }
+
+  /* ---- Undo-плашка после удаления ---- */
+  .undo-toast {
+    display: none; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 0 16px 10px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2);
+    border: 1px solid var(--border); flex-shrink: 0; font-size: 14px; color: var(--text-primary);
+  }
+  .undo-toast.open { display: flex; }
+  #undoBtn { background: none; border: none; color: var(--accent); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
+
+  .day-group { margin-top: 16px; }
   .day-header {
-    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em;
     margin: 0 0 4px; position: sticky; top: 0; background: var(--bg); padding: 8px 0;
   }
   .list-loading, .list-empty { text-align: center; color: var(--text-muted); font-size: 14px; padding: 40px 0; }
+
+  .list-row { cursor: pointer; user-select: none; -webkit-user-select: none; border-radius: 10px; }
+  .list-row.selected { background: var(--surface-2); }
+  .list-row.selected .entry-desc { color: var(--accent); }
+  .select-check {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; display: none;
+  }
+  .select-mode .select-check { display: block; }
+  .select-mode .select-check.checked { background: var(--accent); border-color: var(--accent); }
+
+  .select-toolbar {
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border);
+    background: var(--bg); flex-shrink: 0;
+  }
+  .select-toolbar.open { display: flex; }
+  .select-toolbar button { font-family: inherit; font-size: 14px; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; }
+  .btn-cancel { background: var(--surface); color: var(--text-primary); }
+  .btn-delete { background: var(--danger); color: #fff; font-weight: 600; }
+  .btn-delete:disabled { opacity: 0.5; }
+
+  /* ---- Экран редактирования записи ---- */
+  .edit-field { margin-bottom: 16px; }
+  .edit-label { font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; }
+  .edit-field textarea, .edit-field input[type="time"] {
+    width: 100%; font-size: 16px; font-family: inherit; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary);
+  }
+  .edit-field textarea { min-height: 70px; resize: none; }
+  .edit-time-row { display: flex; gap: 10px; }
+  .edit-time-row .edit-field { flex: 1; }
+  .edit-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-save { flex: 1; background: var(--accent); color: var(--on-accent); font-weight: 600; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-family: inherit; cursor: pointer; }
+  .btn-delete-entry { padding: 14px 18px; background: none; color: var(--danger); border: 1px solid var(--danger); border-radius: 12px; font-size: 15px; font-family: inherit; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -176,13 +247,58 @@
   <!-- Полный список записей -->
   <div class="full-overlay" id="listOverlay">
     <div class="full-header">
-      <h2>Все записи</h2>
-      <button class="icon-btn" id="closeList" aria-label="Закрыть">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <button class="icon-btn small" id="backFromList" aria-label="Назад">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
+      <h2>Все записи</h2>
+      <button class="icon-btn small" id="exportBtn" aria-label="Экспорт в CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="Поиск по записям…">
+      <div class="chip-row" id="categoryChips"></div>
     </div>
     <div class="full-body" id="listBody">
       <p class="list-loading">Загрузка…</p>
+    </div>
+    <div class="undo-toast" id="undoToast">
+      <span id="undoText">Удалено</span>
+      <button id="undoBtn">Отменить</button>
+    </div>
+    <div class="select-toolbar" id="selectToolbar">
+      <button class="btn-cancel" id="cancelSelect">Отмена</button>
+      <button class="btn-delete" id="deleteSelected" disabled>Удалить</button>
+    </div>
+  </div>
+
+  <!-- Редактирование записи -->
+  <div class="full-overlay" id="editOverlay">
+    <div class="full-header">
+      <button class="icon-btn small" id="backFromEdit" aria-label="Назад">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2>Изменить запись</h2>
+    </div>
+    <div class="full-body">
+      <div class="edit-field">
+        <p class="edit-label">Описание</p>
+        <textarea id="editDesc"></textarea>
+      </div>
+      <div class="edit-time-row">
+        <div class="edit-field">
+          <p class="edit-label">Начало</p>
+          <input type="time" id="editStart">
+        </div>
+        <div class="edit-field">
+          <p class="edit-label">Конец</p>
+          <input type="time" id="editEnd">
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-save" id="saveEdit">Сохранить</button>
+        <button class="btn-delete-entry" id="deleteEdit">Удалить</button>
+      </div>
     </div>
   </div>
 
@@ -224,12 +340,15 @@
   };
 
   const root = document.documentElement;
+  let fullEntries = []; // объявлено заранее — используется в applyTheme() для перекраски бейджей при смене темы
 
   function contrastColor(hex) {
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance > 0.6 ? '#1f1e1c' : '#ffffff';
   }
+
+  let isDarkBg = true; // обновляется в applyTheme — нужно для расчёта цвета текста бейджей категорий
 
   function applyTheme(key) {
     const t = THEMES[key];
@@ -243,6 +362,7 @@
     root.style.setProperty('--text-muted', t.textm);
     root.style.setProperty('--font-body', t.font);
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t.bg);
+    isDarkBg = contrastColor(t.bg) === '#ffffff'; // если фону нужен белый текст — значит фон тёмный
 
     const accentOverride = localStorage.getItem('accentOverride');
     const accent = accentOverride || t.accent;
@@ -251,6 +371,7 @@
 
     localStorage.setItem('themeKey', key);
     renderThemeList(key);
+    if (fullEntries.length) renderFullList(); // перекрасить бейджи категорий под новую тему
   }
 
   function applyAccent(hex) {
@@ -285,34 +406,40 @@
 
   applyTheme(localStorage.getItem('themeKey') || 'dark');
 
-  /* ======================== ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ (с учётом кнопки "назад") ======================== */
-  let activeOverlay = null; // 'settings' | 'list' | null
+  /* ======================== СТЕК ЭКРАНОВ (настройки / список / редактирование) ========================
+     Любое открытие — это push в history. Закрытие — ВСЕГДА через history.back(),
+     неважно, вызвано ли оно системной кнопкой "назад" или тапом по элементам
+     интерфейса — так поведение одинаковое из любого источника закрытия. */
+  const overlays = {
+    settings: document.getElementById('overlay'),
+    list: document.getElementById('listOverlay'),
+    edit: document.getElementById('editOverlay')
+  };
+  let overlayStack = [];
 
   function openOverlay(name) {
-    document.getElementById(name === 'settings' ? 'overlay' : 'listOverlay').classList.add('open');
-    activeOverlay = name;
-    history.pushState({ overlay: name }, '', location.href);
+    overlays[name].classList.add('open');
+    overlayStack.push(name);
+    history.pushState({ overlay: name, depth: overlayStack.length }, '', location.href);
   }
-  function closeOverlay() {
-    if (!activeOverlay) return;
-    document.getElementById(activeOverlay === 'settings' ? 'overlay' : 'listOverlay').classList.remove('open');
-    activeOverlay = null;
-    if (history.state && history.state.overlay) history.back();
+  function requestClose() {
+    if (overlayStack.length) history.back();
   }
 
   document.getElementById('settingsBtn').addEventListener('click', () => openOverlay('settings'));
-  document.getElementById('closeSettings').addEventListener('click', closeOverlay);
-  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeOverlay(); });
+  document.getElementById('closeSettings').addEventListener('click', requestClose);
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') requestClose(); });
 
   document.getElementById('statCountBtn').addEventListener('click', () => { openOverlay('list'); loadFullList(); });
-  document.getElementById('closeList').addEventListener('click', closeOverlay);
+  document.getElementById('backFromList').addEventListener('click', requestClose);
+  document.getElementById('backFromEdit').addEventListener('click', requestClose);
 
-  /* ======================== ЗАЩИТА ОТ СЛУЧАЙНОГО ЗАКРЫТИЯ ======================== */
   history.pushState({ guard: true }, '', location.href);
   window.addEventListener('popstate', function onPop() {
-    if (activeOverlay) {
-      document.getElementById(activeOverlay === 'settings' ? 'overlay' : 'listOverlay').classList.remove('open');
-      activeOverlay = null;
+    if (overlayStack.length) {
+      const top = overlayStack.pop();
+      overlays[top].classList.remove('open');
+      if (top === 'list') { exitSelectMode(); finalizePendingDeleteIfAny(); }
       return;
     }
     const hasUnsaved = txt.value.trim().length > 0;
@@ -323,29 +450,62 @@
     }
   });
 
-  /* ======================== ЗАПРОСЫ К СЕРВЕРУ (всегда без кэша!) ======================== */
+  /* ======================== ЗАПРОСЫ К СЕРВЕРУ (всегда без кэша) ======================== */
   function fetchFresh(url) {
-    // cache:'no-store' + случайный параметр — двойная защита от того, что браузер
-    // покажет старый закэшированный ответ вместо реальных свежих данных.
     const bust = (url.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
     return fetch(url + bust, { cache: 'no-store' }).then((r) => r.json());
   }
-
-  function renderEntryRow(entry, showDate) {
-    const row = document.createElement('div');
-    row.className = 'entry-row';
-    const when = showDate
-      ? '<div class="entry-when"><div class="entry-date">' + entry.date + '</div><div class="entry-time">' + (entry.start || '') + (entry.end ? '–' + entry.end : '') + '</div></div>'
-      : '<div class="entry-when"><div class="entry-time">' + (entry.start || '') + (entry.end ? '–' + entry.end : '') + '</div></div>';
-    row.innerHTML = when +
-      '<span class="entry-desc">' + escapeHtml(entry.description) + '</span>' +
-      (entry.hours ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
-    return row;
+  function postAction(payload) {
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then((r) => r.json());
   }
   function escapeHtml(s) {
     const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
   }
 
+  // Детерминированный цвет по названию категории — одна и та же категория всегда
+  // получает один и тот же цвет, без ручной настройки. Фон — полупрозрачный (сам
+  // подстраивается под любую тему), текст — светлее/темнее в зависимости от темы.
+  function categoryColor(name) {
+    if (!name) return null;
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash) % 360;
+    return {
+      bg: 'hsla(' + hue + ', 65%, 50%, 0.18)',
+      text: 'hsl(' + hue + ', 70%, ' + (isDarkBg ? '68%' : '35%') + ')'
+    };
+  }
+
+  function renderEntryRow(entry, showDate, opts) {
+    opts = opts || {};
+    const row = document.createElement('div');
+    row.className = 'entry-row' + (opts.selectable ? ' list-row' : '') + (opts.animate ? ' enter' : '');
+    if (opts.selectable) row.dataset.id = entry.id;
+
+    const timeText = (entry.start || '') + (entry.end ? '–' + entry.end : '');
+    const when = showDate
+      ? '<div class="entry-when"><div class="entry-date">' + entry.date + '</div><span class="time-badge">' + timeText + '</span></div>'
+      : '<div class="entry-when"><span class="time-badge">' + timeText + '</span></div>';
+
+    const cc = categoryColor(entry.category);
+    const catBadge = cc
+      ? '<span class="cat-badge" style="background:' + cc.bg + '; color:' + cc.text + ';">' + escapeHtml(entry.category) + '</span>'
+      : '';
+
+    row.innerHTML =
+      (opts.selectable ? '<div class="select-check"></div>' : '') +
+      when +
+      '<span class="entry-desc' + (opts.wrap ? ' wrap' : '') + '">' + escapeHtml(entry.description) + '</span>' +
+      catBadge +
+      (entry.hours ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
+    return row;
+  }
+
+  /* ======================== ГЛАВНЫЙ ЭКРАН: статистика + последние 3 ======================== */
   function loadStats() {
     if (API_URL.indexOf('ВСТАВЬ_СЮДА') !== -1) return;
     fetchFresh(API_URL + '?action=stats')
@@ -357,43 +517,250 @@
           last3Container.innerHTML = '<p class="empty-note">Пока нет записей</p>';
           return;
         }
-        data.last3.forEach((entry) => last3Container.appendChild(renderEntryRow(entry, true)));
+        data.last3.forEach((entry, i) => last3Container.appendChild(renderEntryRow(entry, true, { animate: i === 0 })));
       })
-      .catch(() => { /* тихо игнорируем — не мешаем вводу */ });
+      .catch(() => {});
   }
   loadStats();
+
+  /* ======================== ЭКРАН "ВСЕ ЗАПИСИ" (фильтр, мультивыбор, undo, экспорт) ======================== */
+  let selectMode = false;
+  let selectedIds = new Set();
+  let filterText = '';
+  let filterCategory = null;
+  let pendingDeleteIds = new Set(); // отложенные к удалению — пока плашка Undo видна, на сервер ничего не улетает
+  let undoTimer = null;
 
   function loadFullList() {
     const body = document.getElementById('listBody');
     body.innerHTML = '<p class="list-loading">Загрузка…</p>';
+    exitSelectMode();
+    finalizePendingDeleteIfAny();
     if (API_URL.indexOf('ВСТАВЬ_СЮДА') !== -1) { body.innerHTML = '<p class="list-empty">API не настроен</p>'; return; }
 
     fetchFresh(API_URL + '?action=list')
       .then((data) => {
-        body.innerHTML = '';
-        if (!data.entries || !data.entries.length) {
-          body.innerHTML = '<p class="list-empty">Записей пока нет</p>';
-          return;
-        }
-        let currentDate = null, group = null;
-        data.entries.forEach((entry) => {
-          if (entry.date !== currentDate) {
-            currentDate = entry.date;
-            group = document.createElement('div');
-            group.className = 'day-group';
-            const header = document.createElement('p');
-            header.className = 'day-header';
-            header.textContent = entry.date;
-            group.appendChild(header);
-            body.appendChild(group);
-          }
-          group.appendChild(renderEntryRow(entry, false));
-        });
+        fullEntries = data.entries || [];
+        renderCategoryChips();
+        renderFullList();
       })
       .catch(() => { body.innerHTML = '<p class="list-empty">Не удалось загрузить</p>'; });
   }
 
-  /* ======================== СОХРАНЕНИЕ ======================== */
+  function renderCategoryChips() {
+    const wrap = document.getElementById('categoryChips');
+    const cats = Array.from(new Set(fullEntries.map((e) => e.category).filter(Boolean)));
+    wrap.innerHTML = '';
+    const allChip = document.createElement('button');
+    allChip.className = 'chip' + (filterCategory === null ? ' active' : '');
+    allChip.textContent = 'Все';
+    allChip.addEventListener('click', () => { filterCategory = null; renderCategoryChips(); renderFullList(); });
+    wrap.appendChild(allChip);
+    cats.forEach((cat) => {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (filterCategory === cat ? ' active' : '');
+      chip.textContent = cat;
+      chip.addEventListener('click', () => { filterCategory = (filterCategory === cat ? null : cat); renderCategoryChips(); renderFullList(); });
+      wrap.appendChild(chip);
+    });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    filterText = e.target.value.trim().toLowerCase();
+    renderFullList();
+  });
+
+  function getVisibleEntries() {
+    return fullEntries.filter((e) => {
+      if (pendingDeleteIds.has(e.id)) return false; // скрыты, пока ждём подтверждения/отмены удаления
+      if (filterCategory && e.category !== filterCategory) return false;
+      if (filterText && !(e.description || '').toLowerCase().includes(filterText)) return false;
+      return true;
+    });
+  }
+
+  function renderFullList() {
+    const body = document.getElementById('listBody');
+    body.innerHTML = '';
+    const visible = getVisibleEntries();
+    if (!visible.length) {
+      body.innerHTML = '<p class="list-empty">' + (filterText || filterCategory ? 'Ничего не найдено' : 'Записей пока нет') + '</p>';
+      return;
+    }
+
+    let currentDate = null, group = null;
+    visible.forEach((entry) => {
+      if (entry.date !== currentDate) {
+        currentDate = entry.date;
+        group = document.createElement('div');
+        group.className = 'day-group';
+        const header = document.createElement('p');
+        header.className = 'day-header';
+        header.textContent = entry.date;
+        group.appendChild(header);
+        body.appendChild(group);
+      }
+      const row = renderEntryRow(entry, false, { selectable: true, wrap: true });
+
+      let pressTimer = null;
+      row.addEventListener('pointerdown', () => {
+        pressTimer = setTimeout(() => { enterSelectMode(); toggleSelect(row, entry.id); }, 500);
+      });
+      row.addEventListener('pointerup', () => clearTimeout(pressTimer));
+      row.addEventListener('pointerleave', () => clearTimeout(pressTimer));
+      row.addEventListener('click', () => {
+        if (selectMode) { toggleSelect(row, entry.id); }
+        else { openEdit(entry); }
+      });
+
+      group.appendChild(row);
+    });
+  }
+
+  function enterSelectMode() {
+    if (selectMode) return;
+    selectMode = true;
+    document.getElementById('listBody').classList.add('select-mode');
+    document.getElementById('selectToolbar').classList.add('open');
+  }
+  function exitSelectMode() {
+    selectMode = false;
+    selectedIds.clear();
+    document.getElementById('listBody').classList.remove('select-mode');
+    document.getElementById('selectToolbar').classList.remove('open');
+    document.querySelectorAll('.list-row.selected').forEach((r) => r.classList.remove('selected'));
+    document.querySelectorAll('.select-check.checked').forEach((c) => c.classList.remove('checked'));
+    updateDeleteBtn();
+  }
+  function toggleSelect(row, id) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+      row.classList.remove('selected');
+      row.querySelector('.select-check').classList.remove('checked');
+    } else {
+      selectedIds.add(id);
+      row.classList.add('selected');
+      row.querySelector('.select-check').classList.add('checked');
+    }
+    updateDeleteBtn();
+  }
+  function updateDeleteBtn() {
+    const btn = document.getElementById('deleteSelected');
+    btn.disabled = selectedIds.size === 0;
+    btn.textContent = selectedIds.size ? 'Удалить (' + selectedIds.size + ')' : 'Удалить';
+  }
+
+  /* ---- Удаление с отменой (Undo): сразу прячем из списка, реально удаляем
+     с сервера только через 5 секунд, если пользователь не нажал "Отменить". ---- */
+  function requestDelete(ids, label) {
+    ids.forEach((id) => pendingDeleteIds.add(id));
+    renderFullList();
+    showUndoToast(ids, label);
+  }
+  function showUndoToast(ids, label) {
+    clearTimeout(undoTimer);
+    const toast = document.getElementById('undoToast');
+    document.getElementById('undoText').textContent = label;
+    toast.classList.add('open');
+    undoTimer = setTimeout(() => confirmPendingDelete(ids), 5000);
+  }
+  function finalizePendingDeleteIfAny() {
+    // Если список закрывают или перезагружают, пока висит плашка "Отменить" —
+    // подтверждаем удаление сразу, а не оставляем запись в подвешенном состоянии
+    // (скрытой из виду, но так и не удалённой на сервере).
+    if (pendingDeleteIds.size && undoTimer) {
+      clearTimeout(undoTimer);
+      confirmPendingDelete(Array.from(pendingDeleteIds));
+    }
+    document.getElementById('undoToast').classList.remove('open');
+  }
+  function confirmPendingDelete(ids) {
+    document.getElementById('undoToast').classList.remove('open');
+    postAction({ action: 'delete', ids: ids })
+      .then(() => {
+        fullEntries = fullEntries.filter((e) => !ids.includes(e.id));
+        ids.forEach((id) => pendingDeleteIds.delete(id));
+        renderCategoryChips();
+        renderFullList();
+        loadStats();
+      })
+      .catch(() => { alert('Не удалось удалить на сервере. Попробуй ещё раз.'); ids.forEach((id) => pendingDeleteIds.delete(id)); renderFullList(); });
+  }
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    clearTimeout(undoTimer);
+    document.getElementById('undoToast').classList.remove('open');
+    pendingDeleteIds.clear();
+    renderFullList();
+  });
+
+  document.getElementById('cancelSelect').addEventListener('click', exitSelectMode);
+  document.getElementById('deleteSelected').addEventListener('click', () => {
+    if (!selectedIds.size) return;
+    const ids = Array.from(selectedIds);
+    const label = 'Удалено записей: ' + ids.length;
+    exitSelectMode();
+    requestDelete(ids, label);
+  });
+
+  /* ---- Экспорт видимых (с учётом фильтра) записей в CSV ---- */
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    if (!fullEntries.length) { alert('Нет данных для экспорта'); return; }
+    const rows = getVisibleEntries();
+    const header = 'Дата;Начало;Конец;Часы;Описание;Категория';
+    const lines = rows.map((e) => [e.date, e.start, e.end, e.hours, csvEscape(e.description), csvEscape(e.category)].join(';'));
+    const csv = header + '\n' + lines.join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM — чтобы Excel верно понял кириллицу
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Дневник_задач_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  function csvEscape(s) {
+    s = (s || '').toString();
+    if (s.indexOf(';') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  /* ======================== ЭКРАН РЕДАКТИРОВАНИЯ ======================== */
+  let editingId = null;
+
+  function openEdit(entry) {
+    editingId = entry.id;
+    document.getElementById('editDesc').value = entry.description || '';
+    document.getElementById('editStart').value = entry.start || '';
+    document.getElementById('editEnd').value = entry.end || '';
+    openOverlay('edit');
+  }
+
+  document.getElementById('saveEdit').addEventListener('click', () => {
+    if (!editingId) return;
+    const payload = {
+      action: 'update',
+      id: editingId,
+      description: document.getElementById('editDesc').value.trim(),
+      start: document.getElementById('editStart').value,
+      end: document.getElementById('editEnd').value
+    };
+    postAction(payload)
+      .then((data) => {
+        if (data.ok) { requestClose(); loadFullList(); loadStats(); }
+        else alert('Ошибка: ' + (data.error || 'не удалось сохранить'));
+      })
+      .catch(() => alert('Нет связи с сервером'));
+  });
+
+  document.getElementById('deleteEdit').addEventListener('click', () => {
+    if (!editingId) return;
+    const id = editingId;
+    requestClose(); // возвращаемся к списку — плашка Undo появится уже там
+    setTimeout(() => requestDelete([id], 'Запись удалена'), 50);
+  });
+
+  /* ======================== СОХРАНЕНИЕ НОВОЙ ЗАПИСИ ======================== */
   function resetSave() { saveBtn.disabled = false; saveBtn.textContent = 'Записать'; }
 
   saveBtn.addEventListener('click', () => {
@@ -410,18 +777,13 @@
     statusEl.style.color = 'var(--text-secondary)';
     statusEl.textContent = '';
 
-    fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ text: v })
-    })
-      .then((r) => r.json())
+    postAction({ action: 'save', text: v })
       .then((data) => {
         if (data.ok) {
           statusEl.style.color = '#639922';
           statusEl.textContent = data.message || 'Записано ✓';
           txt.value = '';
-          loadStats(); // обновляем статистику и последние записи сразу же, без перезагрузки страницы
+          loadStats();
         } else {
           statusEl.style.color = '#e24b4a';
           statusEl.textContent = 'Ошибка: ' + (data.error || 'не удалось');
