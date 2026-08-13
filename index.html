@@ -51,6 +51,16 @@
     outline: none; background: transparent; color: var(--text-primary); margin-bottom: 10px;
   }
   textarea::placeholder { color: var(--text-muted); }
+
+  .textarea-wrap { position: relative; }
+  .mic-btn {
+    position: absolute; top: 10px; right: 10px; width: 38px; height: 38px;
+    border-radius: 50%; border: none; background: var(--surface-2); color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .mic-btn svg { width: 19px; height: 19px; }
+  .mic-btn.listening { background: var(--danger); color: #fff; animation: micPulse 1.2s ease-in-out infinite; }
+  @keyframes micPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224,90,78,0.4); } 50% { box-shadow: 0 0 0 8px rgba(224,90,78,0); } }
   textarea:focus { border-color: var(--accent); }
 
   button.primary {
@@ -217,7 +227,12 @@
     </button>
   </div>
 
-  <textarea id="txt" placeholder="Например: 2 часа доработка отчёта по клиенту X"></textarea>
+  <div class="textarea-wrap">
+    <textarea id="txt" placeholder="Например: 2 часа доработка отчёта по клиенту X"></textarea>
+    <button class="mic-btn" id="micBtn" aria-label="Голосовой ввод" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+    </button>
+  </div>
   <button class="primary" id="saveBtn">Записать</button>
   <div id="status"></div>
 
@@ -314,6 +329,44 @@
   const last3Container = document.getElementById('last3Container');
 
   window.addEventListener('load', () => { try { txt.focus(); } catch (e) {} });
+
+  /* ======================== ГОЛОСОВОЙ ВВОД (второй способ, вдобавок к микрофону клавиатуры) ========================
+     Раньше эта же кнопка не работала, потому что страница жила внутри Apps
+     Script — там особая песочница, блокирующая доступ к микрофону. Теперь
+     страница на обычном домене (GitHub Pages), поэтому пробуем снова. */
+  const micBtn = document.getElementById('micBtn');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null, listening = false, baseText = '';
+
+  if (SR) {
+    micBtn.style.display = 'flex';
+    recognition = new SR();
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = (e) => {
+      let s = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) s += e.results[i][0].transcript;
+      txt.value = (baseText ? baseText + ' ' : '') + s;
+    };
+    recognition.onend = () => { if (listening) stopListening(); };
+    recognition.onerror = () => stopListening();
+  }
+
+  function startListening() {
+    if (!recognition) return;
+    baseText = txt.value.trim();
+    listening = true;
+    micBtn.classList.add('listening');
+    try { recognition.start(); } catch (e) {}
+  }
+  function stopListening() {
+    listening = false;
+    micBtn.classList.remove('listening');
+    if (recognition) { try { recognition.stop(); } catch (e) {} }
+  }
+  micBtn.addEventListener('click', () => { listening ? stopListening() : startListening(); });
 
   /* ======================== ТЕМЫ ======================== */
   const THEMES = {
@@ -501,7 +554,7 @@
       when +
       '<span class="entry-desc' + (opts.wrap ? ' wrap' : '') + '">' + escapeHtml(entry.description) + '</span>' +
       catBadge +
-      (entry.hours ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
+      (entry.hours !== '' && entry.hours !== undefined && entry.hours !== null ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
     return row;
   }
 
@@ -795,17 +848,21 @@
           statusEl.style.color = '#639922';
           statusEl.textContent = data.message || 'Записано ✓';
           txt.value = '';
-          loadStats();
         } else {
           statusEl.style.color = '#e24b4a';
           statusEl.textContent = 'Ошибка: ' + (data.error || 'не удалось');
         }
+        loadStats();
         resetSave();
         try { txt.focus(); } catch (e) {}
       })
       .catch(() => {
+        // Ответ не дошёл (частая история на мобильной сети), но сама запись
+        // почти наверняка уже сохранилась на сервере — обновляем статистику,
+        // чтобы не пришлось вручную перезагружать страницу для проверки.
         statusEl.style.color = '#e24b4a';
-        statusEl.textContent = 'Нет связи с сервером';
+        statusEl.textContent = 'Нет ответа от сервера — но запись, скорее всего, уже сохранена, проверяю…';
+        loadStats();
         resetSave();
       });
   });
