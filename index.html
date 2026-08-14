@@ -250,7 +250,6 @@
   </div>
 
   <p class="hint">Тап по полю, микрофон на клавиатуре, диктуй</p>
-  <p class="hint" id="debugTime" style="margin-top:4px; word-break:break-all;">проверка сервера…</p>
 
   <!-- Настройки -->
   <div class="overlay" id="overlay">
@@ -585,20 +584,6 @@
       .catch(() => {});
   }
   loadStats();
-
-  // Временная диагностика: показывает, с КАКИМ именно сервером реально
-  // общается это приложение прямо сейчас, и что он считает "сейчас".
-  // Если тут время неверное — проблема на сервере/URL, а не в кэше телефона.
-  if (API_URL.indexOf('ВСТАВЬ_СЮДА') === -1) {
-    fetchFresh(API_URL + '?action=timecheck')
-      .then((data) => {
-        document.getElementById('debugTime').textContent =
-          'Сервер отвечает: ' + (data.nowInTz || '?') + ' | URL: ' + API_URL.slice(0, 60) + '…';
-      })
-      .catch(() => {
-        document.getElementById('debugTime').textContent = 'Сервер не ответил на диагностику. URL: ' + API_URL.slice(0, 60) + '…';
-      });
-  }
 
   /* ======================== ЭКРАН "ВСЕ ЗАПИСИ" (фильтр, мультивыбор, undo, экспорт) ======================== */
   let selectMode = false;
