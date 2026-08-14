@@ -814,12 +814,12 @@ function renderEntryRow(entry, showDate, opts) {
   let editingId = null;
 
   function openEdit(entry) {
-    editingId = entry.id;
-    document.getElementById('editDesc').value = entry.description || '';
-    document.getElementById('editStart').value = entry.start || '';
-    document.getElementById('editEnd').value = entry.end || '';
-    openOverlay('edit');
-  }
+  editingId = entry.id;
+  document.getElementById('editDesc').value = entry.description || '';
+  document.getElementById('editStart').value = entry.start || '';
+  document.getElementById('editEnd').value = entry.end || '';
+  openOverlay('edit');
+}
 
   document.getElementById('saveEdit').addEventListener('click', () => {
     if (!editingId) return;
