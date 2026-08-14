@@ -820,7 +820,6 @@ function renderEntryRow(entry, showDate, opts) {
   document.getElementById('editEnd').value = entry.end || '';
   openOverlay('edit');
 }
-
   document.getElementById('saveEdit').addEventListener('click', () => {
     if (!editingId) return;
     const payload = {
