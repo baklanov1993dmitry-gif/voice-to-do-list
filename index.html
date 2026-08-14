@@ -816,8 +816,9 @@ function renderEntryRow(entry, showDate, opts) {
   function openEdit(entry) {
   editingId = entry.id;
   document.getElementById('editDesc').value = entry.description || '';
-  document.getElementById('editStart').value = entry.start || '';
-  document.getElementById('editEnd').value = entry.end || '';
+  // Пропускаем время через наш новый конвертер, чтобы инпуты телефона не ломались
+  document.getElementById('editStart').value = getLocalTimeFromIso(entry.start) || '';
+  document.getElementById('editEnd').value = getLocalTimeFromIso(entry.end) || '';
   openOverlay('edit');
 }
   document.getElementById('saveEdit').addEventListener('click', () => {
