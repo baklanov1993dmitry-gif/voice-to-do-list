@@ -541,42 +541,31 @@
     };
   }
 
-  function getLocalTimeFromIso(isoString) {
-  if (!isoString) return '';
-  if (isoString.length === 5 && isoString.includes(':')) return isoString;
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '';
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
+  function renderEntryRow(entry, showDate, opts) {
+    opts = opts || {};
+    const ctxClass = showDate ? ' ctx-main' : ' ctx-archive';
+    const row = document.createElement('div');
+    row.className = 'entry-row' + ctxClass + (opts.selectable ? ' list-row' : '') + (opts.animate ? ' enter' : '');
+    if (opts.selectable) row.dataset.id = entry.id;
 
-function renderEntryRow(entry, showDate, opts) {
-  opts = opts || {};
-  const ctxClass = showDate ? ' ctx-main' : ' ctx-archive';
-  const row = document.createElement('div');
-  row.className = 'entry-row' + ctxClass + (opts.selectable ? ' list-row' : '') + (opts.animate ? ' enter' : '');
-  if (opts.selectable) row.dataset.id = entry.id;
-  const localStart = getLocalTimeFromIso(entry.start);
-  const localEnd = getLocalTimeFromIso(entry.end);
-  const timeText = (localStart || '') + (localEnd ? '–' + localEnd : '');
-  const when = showDate
-    ? '<div class="entry-when"><div class="entry-date">' + entry.date + '</div><span class="time-badge">' + timeText + '</span></div>'
-    : '<div class="entry-when"><span class="time-badge">' + timeText + '</span></div>';
-  const cc = categoryColor(entry.category);
-  const catBadge = cc
-    ? '<span class="cat-badge" style="background:' + cc.bg + '; color:' + cc.text + ';">' + 
-  escapeHtml(entry.category) + '</span>'
-    : '';
-  row.innerHTML =
-    (opts.selectable ? '<div class="select-check"></div>' : '') +
-    when +
-    '<span class="entry-desc' + (opts.wrap ? ' wrap' : '') + '">' + escapeHtml(entry.description) + '</span>' 
-  +
-  catBadge +
-  (entry.hours !== '' && entry.hours !== undefined && entry.hours !== null ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
-  return row;
-}
+    const timeText = (entry.start || '') + (entry.end ? '–' + entry.end : '');
+    const when = showDate
+      ? '<div class="entry-when"><div class="entry-date">' + entry.date + '</div><span class="time-badge">' + timeText + '</span></div>'
+      : '<div class="entry-when"><span class="time-badge">' + timeText + '</span></div>';
+
+    const cc = categoryColor(entry.category);
+    const catBadge = cc
+      ? '<span class="cat-badge" style="background:' + cc.bg + '; color:' + cc.text + ';">' + escapeHtml(entry.category) + '</span>'
+      : '';
+
+    row.innerHTML =
+      (opts.selectable ? '<div class="select-check"></div>' : '') +
+      when +
+      '<span class="entry-desc' + (opts.wrap ? ' wrap' : '') + '">' + escapeHtml(entry.description) + '</span>' +
+      catBadge +
+      (entry.hours !== '' && entry.hours !== undefined && entry.hours !== null ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
+    return row;
+  }
 
   /* ======================== ГЛАВНЫЙ ЭКРАН: статистика + последние 3 ======================== */
   function loadStats() {
@@ -814,13 +803,13 @@ function renderEntryRow(entry, showDate, opts) {
   let editingId = null;
 
   function openEdit(entry) {
-  editingId = entry.id;
-  document.getElementById('editDesc').value = entry.description || '';
-  // Пропускаем время через наш новый конвертер, чтобы инпуты телефона не ломались
-  document.getElementById('editStart').value = getLocalTimeFromIso(entry.start) || '';
-  document.getElementById('editEnd').value = getLocalTimeFromIso(entry.end) || '';
-  openOverlay('edit');
-}
+    editingId = entry.id;
+    document.getElementById('editDesc').value = entry.description || '';
+    document.getElementById('editStart').value = entry.start || '';
+    document.getElementById('editEnd').value = entry.end || '';
+    openOverlay('edit');
+  }
+
   document.getElementById('saveEdit').addEventListener('click', () => {
     if (!editingId) return;
     const payload = {
