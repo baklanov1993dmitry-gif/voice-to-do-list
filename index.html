@@ -79,10 +79,18 @@
     display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border);
   }
   .entry-when { display: flex; flex-direction: column; gap: 2px; min-width: 66px; }
-  .entry-date { font-size: 11px; color: var(--text-muted); }
+
+  /* Главный экран: дата — жирная и заметная, время — спокойное, не спорит с датой */
+  .ctx-main .entry-date { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+  .ctx-main .time-badge { font-size: 12px; font-weight: 500; color: var(--text-secondary); background: none; padding: 0; }
+
+  /* Архив: дата (в day-header) — жирная, акцентного цвета; время — тоже жирное, но другого цвета */
+  .ctx-archive .time-badge { font-weight: 700; color: var(--text-primary); background: var(--surface-2); padding: 2px 7px; border-radius: 7px; }
+
+  .entry-date { font-size: 11px; color: var(--text-muted); } /* базовое значение, переопределяется контекстом выше */
   .time-badge {
-    display: inline-block; font-size: 12px; font-weight: 600; color: var(--accent);
-    background: var(--surface-2); padding: 2px 7px; border-radius: 7px; white-space: nowrap; width: fit-content;
+    display: inline-block; font-size: 12px; color: var(--accent);
+    white-space: nowrap; width: fit-content;
   }
   .entry-desc { flex: 1; font-size: 15px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .entry-desc.wrap { white-space: normal; text-overflow: clip; }
@@ -319,7 +327,7 @@
 
 <script>
   // ==== Настрой этот адрес после развёртывания Apps Script ====
-  const API_URL = 'https://script.google.com/macros/s/AKfycbx0VwoUrP5IjYbEVOAOAHoQTmOs-z4EkK1aQGRpT3LWTkfSoTliDM82_8yH3ujX9K_btQ/exec';
+  const API_URL = 'ВСТАВЬ_СЮДА_ССЫЛКУ_ВЕБ_ПРИЛОЖЕНИЯ';
 
   const txt = document.getElementById('txt');
   const saveBtn = document.getElementById('saveBtn');
@@ -535,8 +543,9 @@
 
   function renderEntryRow(entry, showDate, opts) {
     opts = opts || {};
+    const ctxClass = showDate ? ' ctx-main' : ' ctx-archive';
     const row = document.createElement('div');
-    row.className = 'entry-row' + (opts.selectable ? ' list-row' : '') + (opts.animate ? ' enter' : '');
+    row.className = 'entry-row' + ctxClass + (opts.selectable ? ' list-row' : '') + (opts.animate ? ' enter' : '');
     if (opts.selectable) row.dataset.id = entry.id;
 
     const timeText = (entry.start || '') + (entry.end ? '–' + entry.end : '');
