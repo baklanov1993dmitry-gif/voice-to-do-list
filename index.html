@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Мои дела">
 <title>Мои дела</title>
+<meta name="build" content="04.10 12:51">
 <style>
   *{box-sizing:border-box;-webkit-font-smoothing:antialiased;margin:0;padding:0}
   html,body{height:100%}
@@ -61,7 +62,7 @@ window.APP_CONFIG = {
 </script>
 <script>(function () {
 "use strict";
-const BUILD = "04.10 12:39";
+const BUILD = "04.10 12:51";
 /* ===== p1: утилиты, конфиг, состояние, темы, иконки ===== */
 const LSK = { cfg: "mytasks_cfg_v1", theme: "mytasks_theme_v1", cache: "mytasks_cache_v1", pending: "mytasks_pending_v1", view: "mytasks_view_v1", prefs: "mytasks_prefs_v1", notified: "mytasks_notified_v1" };
 const jget = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
@@ -1460,7 +1461,7 @@ function settingsHTML() {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><div class="lbl">Шрифт</div>' + sel("s-font", TH.font, [["sys", "Системный"], ["serif", "С засечками"], ["mono", "Моно"], ["round", "Округлый"]]) +
     '</div><div><div class="lbl">Плотность</div>' + sel("s-dens", TH.dens, [["compact", "Компактно"], ["normal", "Обычно"], ["cozy", "Свободно"]]) + "</div></div>" +
     '<label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="s-glass"' + (TH.glass ? " checked" : "") + "> Стеклянные панели (размытие фона)</label>" +
-    '<div class="lbl">Аккаунт и данные</div><div class="sub" style="margin-bottom:8px;color:var(--sub)">' + esc(S.user ? S.user.email : "") + " · задач: " + Object.keys(S.tasks).length + "</div>" +
+    '<div class="lbl">Аккаунт и данные</div><div class="sub" style="margin-bottom:8px;color:var(--sub)">' + esc(S.user ? S.user.email : "") + " · задач: " + Object.keys(S.tasks).length + " · сборка " + BUILD + "</div>" +
     '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-a="sync">🔄 Обновить с сервера</button><button class="btn ghost" data-a="ping">📡 Проверить связь</button><button class="btn ghost" data-a="notify">🔔 Разрешить уведомления</button><button class="btn ghost" data-a="pushtog">' + (pushOn() ? "📲 Пуши в фоне: ВКЛ (выключить)" : "📲 Включить пуши в фоне") + '</button><button class="btn ghost" data-a="export">💾 Копия JSON</button><button class="btn ghost" data-a="logout" style="color:#d13438">Выйти</button></div>' +
     '<div id="msg" style="margin-top:10px;min-height:18px;font-size:13px;color:' + (ui.msgOk ? "#22c55e" : "#f87171") + '">' + esc(ui.msg) + "</div></div></div>";
 }
@@ -1823,6 +1824,21 @@ function init() {
   try { pendingOpen = new URLSearchParams(location.search).get("t"); if (pendingOpen) history.replaceState(null, "", location.pathname); } catch (e) {}
   if ("serviceWorker" in navigator && !CFG0.TEST) navigator.serviceWorker.addEventListener("message", ev => { const d = ev.data; if (d && d.type === "open" && d.id) { pendingOpen = d.id; render(); } });
   applyTheme(); boot();
+  setTimeout(checkBuild, 1500); setInterval(checkBuild, 300000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkBuild(); });
+}
+/* самообновление: сверяем BUILD с build.txt на сервере и перезагружаемся, если вышла новая версия (старая вкладка не «залипает») */
+async function checkBuild() {
+  if (CFG0.TEST || !/^https?:$/.test(location.protocol)) return;
+  try {
+    const r = await fetch("build.txt?" + Date.now(), { cache: "no-store" }); if (!r.ok) return;
+    const v = (await r.text()).trim(); if (!v || v.length > 40 || v === BUILD) return;
+    if (sessionStorage.getItem("moi_rl") === v) return;                       // уже пробовали — не зацикливаемся
+    const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   // не мешаем вводу
+    sessionStorage.setItem("moi_rl", v);
+    try { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(g => g.update())); } catch (e) {}
+    location.reload();
+  } catch (e) {}
 }
 if (CFG0.TEST) window.__t = { localParse, S, getP: () => P, flush, loadAll, getView: () => view, todayISO, addDays, addTask, toggleDone, nextDue, acts, render, ui, PR, goView, setMyDay, upd, checkReminders, sortItems, groupItems, matches, buildIcs, gcalUrl, pushOn, buildXlsx, reportRows, dayBlocks, daySubmit, addLogX: addLog };
 init();

@@ -1,5 +1,5 @@
 // Версию поднимай при каждом обновлении оболочки (иконки/манифест). index.html и так грузится «сначала из сети».
-const CACHE = "moidela-shell-v4";
+const CACHE = "moidela-shell-v5";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png"];
 
 self.addEventListener("install", e => {
@@ -15,6 +15,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;          // Supabase и всё чужое — мимо кэша, всегда напрямую
+  if (url.pathname.endsWith("build.txt")) return;      // метка версии — всегда с сервера
   const isShell = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html") || url.pathname.endsWith("manifest.json");
   if (isShell) {                                        // страница и манифест: сначала сеть, кэш — только если сети нет
     e.respondWith(fetch(req).then(res => {
