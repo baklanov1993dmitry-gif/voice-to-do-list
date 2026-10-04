@@ -1,45 +1,50 @@
-// Стратегия: сама страница (index.html) всегда берётся из сети, пока есть
-// интернет — так любое обновление кода сразу видно, без плясок с версиями
-// кэша. Кэш для неё — только запасной вариант на случай отсутствия сети.
-// Иконки и манифест меняются редко, их кэшируем сразу и отдаём мгновенно.
-const CACHE = 'dnevnik-shell-v1';
-const SHELL = ['./manifest.json', './icon-192.png', './icon-512.png'];
+// Версию поднимай при каждом обновлении оболочки (иконки/манифест). index.html и так грузится «сначала из сети».
+const CACHE = "moidela-shell-v4";
+const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png"];
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
+self.addEventListener("install", e => {
   self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))));
 });
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
-  );
+self.addEventListener("activate", e => {
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))));
   self.clients.claim();
 });
-
-self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  const isHtml = url.pathname.endsWith('index.html') || url.pathname.endsWith('/');
-
-  if (isHtml) {
-    // Сеть в приоритете: всегда пытаемся получить свежую версию страницы.
-    // Если сети нет — отдаём то, что успели закэшировать в прошлый раз.
-    e.respondWith(
-      fetch(e.request)
-        .then((resp) => {
-          caches.open(CACHE).then((c) => c.put(e.request, resp.clone()));
-          return resp;
-        })
-        .catch(() => caches.match(e.request))
-    );
+self.addEventListener("fetch", e => {
+  const req = e.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;          // Supabase и всё чужое — мимо кэша, всегда напрямую
+  const isShell = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html") || url.pathname.endsWith("manifest.json");
+  if (isShell) {                                        // страница и манифест: сначала сеть, кэш — только если сети нет
+    e.respondWith(fetch(req).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      return res;
+    }).catch(() => caches.match(req).then(r => r || caches.match("./index.html"))));
     return;
   }
+  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {   // иконки: кэш первым
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+    return res;
+  })));
+});
 
-  const isShellAsset = SHELL.some((path) => url.pathname.endsWith(path.replace('./', '')));
-  if (isShellAsset) {
-    e.respondWith(caches.match(e.request).then((cached) => cached || fetch(e.request)));
-  }
-  // Всё остальное (запросы к Apps Script) не перехватываем — идёт обычным путём в сеть.
+// ---- Web Push: приходит с сервера (Supabase Edge Function), работает при закрытом приложении ----
+self.addEventListener("push", e => {
+  let d = {}; try { d = e.data.json(); } catch (_) { d = { title: "Напоминание", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => {
+    if (cs.some(c => c.visibilityState === "visible")) return;       // приложение открыто — оно само покажет всплывашку
+    return self.registration.showNotification(d.title || "Напоминание", {
+      body: d.body || "", tag: d.tag || "moidela", renotify: true, requireInteraction: true,
+      icon: "icon-192.png", badge: "icon-192.png", vibrate: [250, 100, 250, 100, 250], data: { id: d.id || null }
+    });
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const id = e.notification.data && e.notification.data.id;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => {
+    if (cs.length) { cs[0].postMessage({ type: "open", id }); return cs[0].focus(); }
+    return self.clients.openWindow("./" + (id ? "?t=" + encodeURIComponent(id) : ""));
+  }));
 });
