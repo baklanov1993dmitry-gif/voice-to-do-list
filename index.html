@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1b19">
+<title>Дневник задач</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #1c1b19; --surface: #2c2c2a; --surface-2: #242422; --border: #3a3934;
+    --text-primary: #f1efe8; --text-secondary: #b4b2a9; --text-muted: #5f5e5a;
+    --accent: #d85a30; --on-accent: #4a1b0c; --danger: #e05a4e;
+    --font-body: -apple-system, Roboto, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text-primary); font-family: var(--font-body);
+    display: flex; flex-direction: column;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+  }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .header h1 { font-size: 21px; font-weight: 700; margin: 0; color: var(--text-primary); }
+  .icon-btn {
+    background: none; border: none; color: var(--text-secondary); padding: 8px;
+    cursor: pointer; display: flex; align-items: center; border-radius: 10px;
+  }
+  .icon-btn:active { background: var(--surface); }
+  .icon-btn svg { width: 26px; height: 26px; }
+  .icon-btn.small svg { width: 22px; height: 22px; }
+
+  /* ---- Статистика ---- */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat-card {
+    background: var(--surface); border-radius: 14px; padding: 12px 14px; border: none;
+    text-align: left; font-family: inherit; cursor: default;
+  }
+  .stat-card.tappable { cursor: pointer; }
+  .stat-card.tappable:active { background: var(--surface-2); }
+  .stat-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin: 0 0 4px; }
+  .stat-value { font-size: 26px; font-weight: 600; margin: 0; color: var(--text-primary); }
+
+  /* ---- Поле ввода ---- */
+  textarea {
+    width: 100%; min-height: 100px; font-size: 16px; line-height: 1.4; font-family: inherit;
+    padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; resize: none;
+    outline: none; background: transparent; color: var(--text-primary); margin-bottom: 10px;
+  }
+  textarea::placeholder { color: var(--text-muted); }
+
+  .textarea-wrap { position: relative; }
+  .mic-btn {
+    position: absolute; top: 10px; right: 10px; width: 38px; height: 38px;
+    border-radius: 50%; border: none; background: var(--surface-2); color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .mic-btn svg { width: 19px; height: 19px; }
+  .mic-btn.listening { background: var(--danger); color: #fff; animation: micPulse 1.2s ease-in-out infinite; }
+  @keyframes micPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224,90,78,0.4); } 50% { box-shadow: 0 0 0 8px rgba(224,90,78,0); } }
+  textarea:focus { border-color: var(--accent); }
+
+  button.primary {
+    width: 100%; font-size: 16px; font-weight: 500; padding: 15px; border: none;
+    border-radius: 12px; cursor: pointer; background: var(--accent); color: var(--on-accent);
+    margin-bottom: 14px; font-family: inherit;
+  }
+  button.primary:disabled { opacity: 0.6; }
+  button.primary:active { transform: scale(0.98); }
+
+  #status { font-size: 14px; min-height: 18px; margin-bottom: 10px; color: var(--text-secondary); }
+
+  /* ---- Последние записи ---- */
+  .section-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin: 4px 0 8px; }
+  .entry-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border);
+  }
+  .entry-when { display: flex; flex-direction: column; gap: 2px; min-width: 66px; }
+
+  /* Главный экран: дата — жирная и заметная, время — спокойное, не спорит с датой */
+  .ctx-main .entry-date { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+  .ctx-main .time-badge { font-size: 19px; font-weight: 700; color: var(--accent); background: none; padding: 0; letter-spacing: -0.01em; }
+
+  /* Архив: дата (в day-header) — жирная, акцентного цвета; время — тоже жирное, но другого цвета */
+  .ctx-archive .time-badge { font-weight: 700; color: var(--text-primary); background: var(--surface-2); padding: 2px 7px; border-radius: 7px; }
+
+  .entry-date { font-size: 11px; color: var(--text-muted); } /* базовое значение, переопределяется контекстом выше */
+  .time-badge {
+    display: inline-block; font-size: 12px; color: var(--accent);
+    white-space: nowrap; width: fit-content;
+  }
+  .entry-desc { flex: 1; font-size: 15px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .entry-desc.wrap { white-space: normal; text-overflow: clip; }
+  .entry-hours { font-size: 14px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+  .empty-note { font-size: 14px; color: var(--text-muted); padding: 10px 0; }
+
+  .hint { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+  /* ---- Панель настроек ---- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: flex-end; justify-content: center; z-index: 10;
+  }
+  .overlay.open { display: flex; }
+  .sheet {
+    background: var(--bg); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto;
+    border: 1px solid var(--border); border-bottom: none;
+  }
+  .sheet h2 { font-size: 15px; font-weight: 500; margin: 0 0 14px; }
+  .theme-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .theme-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--surface); cursor: pointer;
+  }
+  .theme-row.active { border-color: var(--accent); }
+  .theme-dot { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(128,128,128,0.3); }
+  .theme-info { flex: 1; }
+  .theme-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .theme-font-sample { font-size: 12px; color: var(--text-muted); }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+  .row-label { font-size: 14px; color: var(--text-primary); }
+  input[type="color"] { width: 40px; height: 32px; border: none; border-radius: 8px; padding: 0; background: none; cursor: pointer; }
+  .reset-link { font-size: 12px; color: var(--text-muted); background: none; border: none; cursor: pointer; text-decoration: underline; margin-left: 8px; }
+  .sheet-close {
+    width: 100%; padding: 14px; margin-top: 16px; border: 1px solid var(--border); font-family: inherit;
+    border-radius: 12px; background: none; color: var(--text-primary); font-size: 15px; cursor: pointer;
+  }
+
+  /* ---- Полноэкранные экраны (список, редактирование) ---- */
+  .full-overlay {
+    position: fixed; inset: 0; background: var(--bg); z-index: 20; display: none; flex-direction: column;
+  }
+  .full-overlay.open { display: flex; }
+  .full-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: calc(14px + env(safe-area-inset-top)) 10px 14px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .full-header h2 { margin: 0; font-size: 17px; font-weight: 600; flex: 1; }
+  .full-body { flex: 1; overflow-y: auto; padding: 0 16px 16px; -webkit-overflow-scrolling: touch; }
+
+  /* ---- Поиск и фильтр по категориям ---- */
+  .filter-bar { padding: 14px 16px 14px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+  #searchInput {
+    width: 100%; font-size: 15px; font-family: inherit; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    color: var(--text-primary); margin-bottom: 8px;
+  }
+  #searchInput::placeholder { color: var(--text-muted); }
+  .chip-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .chip {
+    flex-shrink: 0; font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-secondary); cursor: pointer; white-space: nowrap; font-family: inherit;
+  }
+  .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  /* ---- Бейдж категории (цвет свой для каждой категории) ---- */
+  .cat-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 7px; white-space: nowrap; }
+
+  /* ---- Плавное появление новой записи ---- */
+  @keyframes entryIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .entry-row.enter { animation: entryIn 0.25s ease-out; }
+
+  /* ---- Undo-плашка после удаления ---- */
+  .undo-toast {
+    display: none; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 0 16px 10px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2);
+    border: 1px solid var(--border); flex-shrink: 0; font-size: 14px; color: var(--text-primary);
+  }
+  .undo-toast.open { display: flex; }
+  #undoBtn { background: none; border: none; color: var(--accent); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
+
+  .day-group { margin-top: 16px; }
+  .day-header {
+    font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em;
+    margin: 0 0 4px; position: sticky; top: 0; background: var(--bg); padding: 8px 0;
+  }
+  .list-loading, .list-empty { text-align: center; color: var(--text-muted); font-size: 14px; padding: 40px 0; }
+
+  /* ---- Скелетон-заглушки при загрузке ---- */
+  .skeleton {
+    display: inline-block; border-radius: 6px;
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 37%, var(--surface) 63%);
+    background-size: 400% 100%; animation: skeletonPulse 1.4s ease infinite;
+  }
+  @keyframes skeletonPulse { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  .skel-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .skel-time { width: 46px; height: 19px; flex-shrink: 0; }
+  .skel-desc { flex: 1; height: 15px; }
+
+  .list-row { cursor: pointer; user-select: none; -webkit-user-select: none; border-radius: 10px; }
+  .list-row.selected { background: var(--surface-2); }
+  .list-row.selected .entry-desc { color: var(--accent); }
+  .select-check {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; display: none;
+  }
+  .select-mode .select-check { display: block; }
+  .select-mode .select-check.checked { background: var(--accent); border-color: var(--accent); }
+
+  .select-toolbar {
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border);
+    background: var(--bg); flex-shrink: 0;
+  }
+  .select-toolbar.open { display: flex; }
+  .select-toolbar button { font-family: inherit; font-size: 14px; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; }
+  .btn-cancel { background: var(--surface); color: var(--text-primary); }
+  .btn-delete { background: var(--danger); color: #fff; font-weight: 600; }
+  .btn-delete:disabled { opacity: 0.5; }
+
+  /* ---- Экран редактирования записи ---- */
+  .edit-field { margin-bottom: 16px; }
+  .edit-label { font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; }
+  .edit-field textarea, .edit-field input[type="time"] {
+    width: 100%; font-size: 16px; font-family: inherit; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text-primary);
+  }
+  .edit-field textarea { min-height: 70px; resize: none; }
+  .edit-time-row { display: flex; gap: 10px; }
+  .edit-time-row .edit-field { flex: 1; }
+  .edit-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-save { flex: 1; background: var(--accent); color: var(--on-accent); font-weight: 600; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-family: inherit; cursor: pointer; }
+  .btn-delete-entry { padding: 14px 18px; background: none; color: var(--danger); border: 1px solid var(--danger); border-radius: 12px; font-size: 15px; font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Дневник задач</h1>
+    <button class="icon-btn" id="settingsBtn" aria-label="Настройки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <p class="stat-label">Сегодня</p>
+      <p class="stat-value" id="statHours">—</p>
+    </div>
+    <button class="stat-card tappable" id="statCountBtn">
+      <p class="stat-label">Записей</p>
+      <p class="stat-value" id="statCount">—</p>
+    </button>
+  </div>
+
+  <div class="textarea-wrap">
+    <textarea id="txt" placeholder="Например: 2 часа доработка отчёта по клиенту X"></textarea>
+    <button class="mic-btn" id="micBtn" aria-label="Голосовой ввод" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+    </button>
+  </div>
+  <button class="primary" id="saveBtn">Записать</button>
+  <div id="status"></div>
+
+  <p class="section-label" id="last3Label">Последние записи</p>
+  <div id="last3Container">
+    <p class="empty-note">Пока нет записей</p>
+  </div>
+
+  <p class="hint">Тап по полю, микрофон на клавиатуре, диктуй</p>
+
+  <!-- Настройки -->
+  <div class="overlay" id="overlay">
+    <div class="sheet">
+      <h2>Настройки</h2>
+      <div class="theme-list" id="themeList"></div>
+      <div class="row">
+        <span class="row-label">Акцентный цвет</span>
+        <div style="display:flex; align-items:center;">
+          <input type="color" id="accentPicker" value="#d85a30">
+          <button class="reset-link" id="resetAccent">сбросить</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Фон приложения</span>
+        <div style="display:flex; align-items:center;">
+          <input type="color" id="bgPicker" value="#1c1b19">
+          <button class="reset-link" id="resetBg">сбросить</button>
+        </div>
+      </div>
+      <button class="sheet-close" id="closeSettings">Готово</button>
+    </div>
+  </div>
+
+  <!-- Полный список записей -->
+  <div class="full-overlay" id="listOverlay">
+    <div class="full-header">
+      <button class="icon-btn small" id="backFromList" aria-label="Назад">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2>Все записи</h2>
+      <button class="icon-btn small" id="exportBtn" aria-label="Экспорт в CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="Поиск по записям…">
+      <div class="chip-row" id="categoryChips"></div>
+    </div>
+    <div class="full-body" id="listBody">
+      <p class="list-loading">Загрузка…</p>
+    </div>
+    <div class="undo-toast" id="undoToast">
+      <span id="undoText">Удалено</span>
+      <button id="undoBtn">Отменить</button>
+    </div>
+    <div class="select-toolbar" id="selectToolbar">
+      <button class="btn-cancel" id="cancelSelect">Отмена</button>
+      <button class="btn-delete" id="deleteSelected" disabled>Удалить</button>
+    </div>
+  </div>
+
+  <!-- Редактирование записи -->
+  <div class="full-overlay" id="editOverlay">
+    <div class="full-header">
+      <button class="icon-btn small" id="backFromEdit" aria-label="Назад">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2>Изменить запись</h2>
+    </div>
+    <div class="full-body">
+      <div class="edit-field">
+        <p class="edit-label">Описание</p>
+        <textarea id="editDesc"></textarea>
+      </div>
+      <div class="edit-time-row">
+        <div class="edit-field">
+          <p class="edit-label">Начало</p>
+          <input type="time" id="editStart">
+        </div>
+        <div class="edit-field">
+          <p class="edit-label">Конец</p>
+          <input type="time" id="editEnd">
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-save" id="saveEdit">Сохранить</button>
+        <button class="btn-delete-entry" id="deleteEdit">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ==== Настрой этот адрес после развёртывания Apps Script ====
+  const API_URL = 'https://script.google.com/macros/s/AKfycbx0VwoUrP5IjYbEVOAOAHoQTmOs-z4EkK1aQGRpT3LWTkfSoTliDM82_8yH3ujX9K_btQ/exec';
+
+  const txt = document.getElementById('txt');
+  const saveBtn = document.getElementById('saveBtn');
+  const statusEl = document.getElementById('status');
+  const statHours = document.getElementById('statHours');
+  const statCount = document.getElementById('statCount');
+  const last3Container = document.getElementById('last3Container');
+
+  window.addEventListener('load', () => { try { txt.focus(); } catch (e) {} });
+
+  /* ======================== ГОЛОСОВОЙ ВВОД (второй способ, вдобавок к микрофону клавиатуры) ========================
+     Раньше эта же кнопка не работала, потому что страница жила внутри Apps
+     Script — там особая песочница, блокирующая доступ к микрофону. Теперь
+     страница на обычном домене (GitHub Pages), поэтому пробуем снова. */
+  const micBtn = document.getElementById('micBtn');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null, listening = false, baseText = '';
+
+  if (SR) {
+    micBtn.style.display = 'flex';
+    recognition = new SR();
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = (e) => {
+      let s = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) s += e.results[i][0].transcript;
+      txt.value = (baseText ? baseText + ' ' : '') + s;
+    };
+    recognition.onend = () => { if (listening) stopListening(); };
+    recognition.onerror = () => stopListening();
+  }
+
+  function startListening() {
+    if (!recognition) return;
+    baseText = txt.value.trim();
+    listening = true;
+    micBtn.classList.add('listening');
+    try { recognition.start(); } catch (e) {}
+  }
+  function stopListening() {
+    listening = false;
+    micBtn.classList.remove('listening');
+    if (recognition) { try { recognition.stop(); } catch (e) {} }
+  }
+  micBtn.addEventListener('click', () => { listening ? stopListening() : startListening(); });
+
+  /* ======================== ТЕМЫ ======================== */
+  const THEMES = {
+    dark: {
+      name: 'Тёмный контраст', font: '-apple-system, Roboto, "Segoe UI", system-ui, sans-serif',
+      bg: '#1c1b19', surface: '#2c2c2a', surface2: '#242422', border: '#3a3934',
+      text1: '#f1efe8', text2: '#b4b2a9', textm: '#5f5e5a', accent: '#d85a30'
+    },
+    light: {
+      name: 'Минимализм', font: '-apple-system, Roboto, "Segoe UI", system-ui, sans-serif',
+      bg: '#faf9f6', surface: '#ffffff', surface2: '#f2f0ea', border: '#e3e1d9',
+      text1: '#1f1e1c', text2: '#5f5e5a', textm: '#9c9a92', accent: '#2f6fed'
+    },
+    classic: {
+      name: 'Классика', font: '"Lora", Georgia, "Times New Roman", serif',
+      bg: '#f4f1ea', surface: '#ffffff', surface2: '#ece7db', border: '#ddd6c5',
+      text1: '#2b2620', text2: '#6b6255', textm: '#a39c8c', accent: '#b5502f'
+    },
+    tech: {
+      name: 'Технический', font: '"JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace',
+      bg: '#12161c', surface: '#1b212b', surface2: '#171c24', border: '#2a3340',
+      text1: '#dbe4ee', text2: '#8d99a8', textm: '#556270', accent: '#3ea6ff'
+    }
+  };
+
+  const root = document.documentElement;
+  let fullEntries = []; // объявлено заранее — используется в applyTheme() для перекраски бейджей при смене темы
+
+  function contrastColor(hex) {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#1f1e1c' : '#ffffff';
+  }
+
+  /* ---- Перевод HEX <-> HSL — нужно, чтобы из ОДНОГО выбранного цвета фона
+     автоматически подобрать всю остальную согласованную палитру (карточки,
+     границы, текст), а не заставлять человека настраивать каждый цвет вручную. ---- */
+  function hexToHsl(hex) {
+    let r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return [h, s * 100, l * 100];
+  }
+  function hslToHex(h, s, l) {
+    s /= 100; l /= 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+  }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  // Из одного цвета фона подбирает согласованную палитру: карточки чуть
+  // светлее/темнее фона (в зависимости от того, тёмный фон или светлый),
+  // границы — ещё дальше, текст — с гарантированным контрастом.
+  function deriveFromBg(bgHex) {
+    const [h, s, l] = hexToHsl(bgHex);
+    const isDark = l < 50;
+    const dir = isDark ? 1 : -1; // тёмный фон -> карточки светлее; светлый фон -> карточки темнее
+    return {
+      bg: bgHex,
+      surface: hslToHex(h, Math.max(s - 10, 0), clamp(l + dir * 6, 0, 100)),
+      surface2: hslToHex(h, Math.max(s - 10, 0), clamp(l + dir * 10, 0, 100)),
+      border: hslToHex(h, Math.max(s - 15, 0), clamp(l + dir * 16, 0, 100)),
+      text1: isDark ? '#f3f1ec' : '#1a1917',
+      text2: isDark ? '#b6b3ab' : '#5b5850',
+      textm: isDark ? '#6d6a62' : '#96938a'
+    };
+  }
+
+  let isDarkBg = true; // обновляется в applyTheme — нужно для расчёта цвета текста бейджей категорий
+
+  function applyTheme(key) {
+    const t = THEMES[key];
+    if (!t) return;
+    const bgOverride = localStorage.getItem('bgOverride');
+    const palette = bgOverride ? Object.assign({}, t, deriveFromBg(bgOverride)) : t;
+
+    root.style.setProperty('--bg', palette.bg);
+    root.style.setProperty('--surface', palette.surface);
+    root.style.setProperty('--surface-2', palette.surface2);
+    root.style.setProperty('--border', palette.border);
+    root.style.setProperty('--text-primary', palette.text1);
+    root.style.setProperty('--text-secondary', palette.text2);
+    root.style.setProperty('--text-muted', palette.textm);
+    root.style.setProperty('--font-body', t.font);
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', palette.bg);
+    isDarkBg = contrastColor(palette.bg) === '#ffffff'; // если фону нужен белый текст — значит фон тёмный
+
+    const accentOverride = localStorage.getItem('accentOverride');
+    const accent = accentOverride || t.accent;
+    applyAccent(accent);
+    document.getElementById('accentPicker').value = accent;
+    document.getElementById('bgPicker').value = bgOverride || t.bg;
+
+    localStorage.setItem('themeKey', key);
+    renderThemeList(key);
+    if (fullEntries.length) renderFullList(); // перекрасить бейджи категорий под новую тему
+  }
+
+  document.getElementById('bgPicker').addEventListener('input', (e) => {
+    localStorage.setItem('bgOverride', e.target.value);
+    applyTheme(localStorage.getItem('themeKey') || 'dark');
+  });
+  document.getElementById('resetBg').addEventListener('click', () => {
+    localStorage.removeItem('bgOverride');
+    applyTheme(localStorage.getItem('themeKey') || 'dark');
+  });
+
+  function applyAccent(hex) {
+    root.style.setProperty('--accent', hex);
+    root.style.setProperty('--on-accent', contrastColor(hex));
+  }
+
+  function renderThemeList(activeKey) {
+    const list = document.getElementById('themeList');
+    list.innerHTML = '';
+    Object.keys(THEMES).forEach((key) => {
+      const t = THEMES[key];
+      const row = document.createElement('div');
+      row.className = 'theme-row' + (key === activeKey ? ' active' : '');
+      row.innerHTML =
+        '<div class="theme-dot" style="background:' + t.bg + '; border-color:' + t.accent + ';"></div>' +
+        '<div class="theme-info"><div class="theme-name" style="font-family:' + t.font + ';">' + t.name + '</div>' +
+        '<div class="theme-font-sample">Аа Бб — пример текста</div></div>';
+      row.addEventListener('click', () => applyTheme(key));
+      list.appendChild(row);
+    });
+  }
+
+  document.getElementById('accentPicker').addEventListener('input', (e) => {
+    applyAccent(e.target.value);
+    localStorage.setItem('accentOverride', e.target.value);
+  });
+  document.getElementById('resetAccent').addEventListener('click', () => {
+    localStorage.removeItem('accentOverride');
+    applyTheme(localStorage.getItem('themeKey') || 'dark');
+  });
+
+  applyTheme(localStorage.getItem('themeKey') || 'dark');
+
+  /* ======================== СТЕК ЭКРАНОВ (настройки / список / редактирование) ========================
+     Любое открытие — это push в history. Закрытие — ВСЕГДА через history.back(),
+     неважно, вызвано ли оно системной кнопкой "назад" или тапом по элементам
+     интерфейса — так поведение одинаковое из любого источника закрытия. */
+  const overlays = {
+    settings: document.getElementById('overlay'),
+    list: document.getElementById('listOverlay'),
+    edit: document.getElementById('editOverlay')
+  };
+  let overlayStack = [];
+
+  function openOverlay(name) {
+    overlays[name].classList.add('open');
+    overlayStack.push(name);
+    history.pushState({ overlay: name, depth: overlayStack.length }, '', location.href);
+  }
+  function requestClose() {
+    if (overlayStack.length) history.back();
+  }
+
+  document.getElementById('settingsBtn').addEventListener('click', () => openOverlay('settings'));
+  document.getElementById('closeSettings').addEventListener('click', requestClose);
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') requestClose(); });
+
+  document.getElementById('statCountBtn').addEventListener('click', () => { openOverlay('list'); loadFullList(); });
+  document.getElementById('backFromList').addEventListener('click', requestClose);
+  document.getElementById('backFromEdit').addEventListener('click', requestClose);
+
+  history.pushState({ guard: true }, '', location.href);
+  window.addEventListener('popstate', function onPop() {
+    if (overlayStack.length) {
+      const top = overlayStack.pop();
+      overlays[top].classList.remove('open');
+      if (top === 'list') { exitSelectMode(); finalizePendingDeleteIfAny(); }
+      return;
+    }
+    const hasUnsaved = txt.value.trim().length > 0;
+    if (hasUnsaved) {
+      const wantsLeave = confirm('Текст не сохранён. Закрыть без сохранения?');
+      if (wantsLeave) { window.removeEventListener('popstate', onPop); history.back(); }
+      else { history.pushState({ guard: true }, '', location.href); }
+    }
+  });
+
+  /* ======================== ЗАПРОСЫ К СЕРВЕРУ (всегда без кэша) ======================== */
+  function fetchFresh(url) {
+    const bust = (url.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
+    return fetch(url + bust, { cache: 'no-store' }).then((r) => r.json());
+  }
+  function postAction(payload) {
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then((r) => r.json());
+  }
+  function escapeHtml(s) {
+    const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
+  }
+
+  // Детерминированный цвет по названию категории — одна и та же категория всегда
+  // получает один и тот же цвет, без ручной настройки. Фон — полупрозрачный (сам
+  // подстраивается под любую тему), текст — светлее/темнее в зависимости от темы.
+  function categoryColor(name) {
+    if (!name) return null;
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash) % 360;
+    return {
+      bg: 'hsla(' + hue + ', 65%, 50%, 0.18)',
+      text: 'hsl(' + hue + ', 70%, ' + (isDarkBg ? '68%' : '35%') + ')'
+    };
+  }
+
+  function renderEntryRow(entry, showDate, opts) {
+    opts = opts || {};
+    const ctxClass = opts.context === 'archive' ? ' ctx-archive' : ' ctx-main';
+    const row = document.createElement('div');
+    row.className = 'entry-row' + ctxClass + (opts.selectable ? ' list-row' : '') + (opts.animate ? ' enter' : '');
+    if (opts.selectable) row.dataset.id = entry.id;
+
+    const timeText = (entry.start || '') + (entry.end ? '–' + entry.end : '');
+    const when = showDate
+      ? '<div class="entry-when"><div class="entry-date">' + entry.date + '</div><span class="time-badge">' + timeText + '</span></div>'
+      : '<div class="entry-when"><span class="time-badge">' + timeText + '</span></div>';
+
+    const cc = categoryColor(entry.category);
+    const catBadge = cc
+      ? '<span class="cat-badge" style="background:' + cc.bg + '; color:' + cc.text + ';">' + escapeHtml(entry.category) + '</span>'
+      : '';
+
+    row.innerHTML =
+      (opts.selectable ? '<div class="select-check"></div>' : '') +
+      when +
+      '<span class="entry-desc' + (opts.wrap ? ' wrap' : '') + '">' + escapeHtml(entry.description) + '</span>' +
+      catBadge +
+      (entry.hours !== '' && entry.hours !== undefined && entry.hours !== null ? '<span class="entry-hours">' + entry.hours + ' ч</span>' : '');
+    return row;
+  }
+
+  /* ======================== ГЛАВНЫЙ ЭКРАН: статистика + последние 3 ======================== */
+  // Генерирует HTML нескольких строк-скелетонов (мерцающих заглушек) на время загрузки.
+  function skeletonRows(n) {
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      html += '<div class="skel-row"><span class="skeleton skel-time"></span><span class="skeleton skel-desc"></span></div>';
+    }
+    return html;
+  }
+
+  function loadStats() {
+    if (API_URL.indexOf('ВСТАВЬ_СЮДА') !== -1) return;
+    statHours.innerHTML = '<span class="skeleton" style="width:44px; height:26px;"></span>';
+    statCount.innerHTML = '<span class="skeleton" style="width:26px; height:26px;"></span>';
+    last3Container.innerHTML = skeletonRows(3);
+    fetchFresh(API_URL + '?action=stats')
+      .then((data) => {
+        statHours.textContent = (data.todayHours || 0) + ' ч';
+        statCount.textContent = data.todayCount || 0;
+        last3Container.innerHTML = '';
+        if (!data.last3 || !data.last3.length) {
+          document.getElementById('last3Label').textContent = 'Последние записи';
+          last3Container.innerHTML = '<p class="empty-note">Пока нет записей</p>';
+          return;
+        }
+        var headerDate = data.last3[0].date; // дата самой свежей записи — общий заголовок
+        document.getElementById('last3Label').textContent = 'Последние записи — ' + headerDate;
+        data.last3.forEach((entry, i) => {
+          // Дату по строке показываем только если она ОТЛИЧАЕТСЯ от общего заголовка
+          // (например, если ты давно не писал и в списке затесалась вчерашняя запись) —
+          // так не дублируем то, что и так видно сверху, но не теряем важную страховку.
+          var showRowDate = entry.date !== headerDate;
+          last3Container.appendChild(renderEntryRow(entry, showRowDate, { context: 'main', animate: i === 0 }));
+        });
+      })
+      .catch(() => { last3Container.innerHTML = ''; });
+  }
+  loadStats();
+
+  /* ======================== ЭКРАН "ВСЕ ЗАПИСИ" (фильтр, мультивыбор, undo, экспорт) ======================== */
+  let selectMode = false;
+  let selectedIds = new Set();
+  let filterText = '';
+  let filterCategory = null;
+  let pendingDeleteIds = new Set(); // отложенные к удалению — пока плашка Undo видна, на сервер ничего не улетает
+  let undoTimer = null;
+
+  function loadFullList() {
+    const body = document.getElementById('listBody');
+    body.innerHTML = skeletonRows(6);
+    exitSelectMode();
+    finalizePendingDeleteIfAny();
+    if (API_URL.indexOf('ВСТАВЬ_СЮДА') !== -1) { body.innerHTML = '<p class="list-empty">API не настроен</p>'; return; }
+
+    fetchFresh(API_URL + '?action=list')
+      .then((data) => {
+        fullEntries = data.entries || [];
+        renderCategoryChips();
+        renderFullList();
+      })
+      .catch(() => { body.innerHTML = '<p class="list-empty">Не удалось загрузить</p>'; });
+  }
+
+  function renderCategoryChips() {
+    const wrap = document.getElementById('categoryChips');
+    const cats = Array.from(new Set(fullEntries.map((e) => e.category).filter(Boolean)));
+    wrap.innerHTML = '';
+    const allChip = document.createElement('button');
+    allChip.className = 'chip' + (filterCategory === null ? ' active' : '');
+    allChip.textContent = 'Все';
+    allChip.addEventListener('click', () => { filterCategory = null; renderCategoryChips(); renderFullList(); });
+    wrap.appendChild(allChip);
+    cats.forEach((cat) => {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (filterCategory === cat ? ' active' : '');
+      chip.textContent = cat;
+      chip.addEventListener('click', () => { filterCategory = (filterCategory === cat ? null : cat); renderCategoryChips(); renderFullList(); });
+      wrap.appendChild(chip);
+    });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    filterText = e.target.value.trim().toLowerCase();
+    renderFullList();
+  });
+
+  function getVisibleEntries() {
+    return fullEntries.filter((e) => {
+      if (pendingDeleteIds.has(e.id)) return false; // скрыты, пока ждём подтверждения/отмены удаления
+      if (filterCategory && e.category !== filterCategory) return false;
+      if (filterText && !(e.description || '').toLowerCase().includes(filterText)) return false;
+      return true;
+    });
+  }
+
+  function renderFullList() {
+    const body = document.getElementById('listBody');
+    body.innerHTML = '';
+    const visible = getVisibleEntries();
+    if (!visible.length) {
+      body.innerHTML = '<p class="list-empty">' + (filterText || filterCategory ? 'Ничего не найдено' : 'Записей пока нет') + '</p>';
+      return;
+    }
+
+    let currentDate = null, group = null;
+    visible.forEach((entry) => {
+      if (entry.date !== currentDate) {
+        currentDate = entry.date;
+        group = document.createElement('div');
+        group.className = 'day-group';
+        const header = document.createElement('p');
+        header.className = 'day-header';
+        header.textContent = entry.date;
+        group.appendChild(header);
+        body.appendChild(group);
+      }
+      const row = renderEntryRow(entry, false, { context: 'archive', selectable: true, wrap: true });
+
+      // Записи без ID (самые старые, до системы ID) нельзя безопасно выделять/удалять/
+      // редактировать — пропускаем эту логику для них, пока не запущено "Оформить таблицу".
+      if (!entry.id) { group.appendChild(row); return; }
+
+      let pressTimer = null;
+      let longPressFired = false; // клик, идущий следом за долгим тапом, нужно проигнорировать —
+                                   // иначе он тут же отменяет только что сделанное выделение
+      row.addEventListener('pointerdown', () => {
+        longPressFired = false;
+        pressTimer = setTimeout(() => {
+          longPressFired = true;
+          enterSelectMode();
+          toggleSelect(row, entry.id);
+        }, 500);
+      });
+      row.addEventListener('pointerup', () => clearTimeout(pressTimer));
+      row.addEventListener('pointerleave', () => clearTimeout(pressTimer));
+      row.addEventListener('click', () => {
+        if (longPressFired) { longPressFired = false; return; }
+        if (selectMode) { toggleSelect(row, entry.id); }
+        else { openEdit(entry); }
+      });
+
+      group.appendChild(row);
+    });
+  }
+
+  function enterSelectMode() {
+    if (selectMode) return;
+    selectMode = true;
+    document.getElementById('listBody').classList.add('select-mode');
+    document.getElementById('selectToolbar').classList.add('open');
+  }
+  function exitSelectMode() {
+    selectMode = false;
+    selectedIds.clear();
+    document.getElementById('listBody').classList.remove('select-mode');
+    document.getElementById('selectToolbar').classList.remove('open');
+    document.querySelectorAll('.list-row.selected').forEach((r) => r.classList.remove('selected'));
+    document.querySelectorAll('.select-check.checked').forEach((c) => c.classList.remove('checked'));
+    updateDeleteBtn();
+  }
+  function toggleSelect(row, id) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+      row.classList.remove('selected');
+      row.querySelector('.select-check').classList.remove('checked');
+    } else {
+      selectedIds.add(id);
+      row.classList.add('selected');
+      row.querySelector('.select-check').classList.add('checked');
+    }
+    updateDeleteBtn();
+  }
+  function updateDeleteBtn() {
+    const btn = document.getElementById('deleteSelected');
+    btn.disabled = selectedIds.size === 0;
+    btn.textContent = selectedIds.size ? 'Удалить (' + selectedIds.size + ')' : 'Удалить';
+  }
+
+  /* ---- Удаление с отменой (Undo): сразу прячем из списка, реально удаляем
+     с сервера только через 5 секунд, если пользователь не нажал "Отменить". ---- */
+  function requestDelete(ids, label) {
+    ids.forEach((id) => pendingDeleteIds.add(id));
+    renderFullList();
+    showUndoToast(ids, label);
+  }
+  function showUndoToast(ids, label) {
+    clearTimeout(undoTimer);
+    const toast = document.getElementById('undoToast');
+    document.getElementById('undoText').textContent = label;
+    toast.classList.add('open');
+    undoTimer = setTimeout(() => confirmPendingDelete(ids), 5000);
+  }
+  function finalizePendingDeleteIfAny() {
+    // Если список закрывают или перезагружают, пока висит плашка "Отменить" —
+    // подтверждаем удаление сразу, а не оставляем запись в подвешенном состоянии
+    // (скрытой из виду, но так и не удалённой на сервере).
+    if (pendingDeleteIds.size && undoTimer) {
+      clearTimeout(undoTimer);
+      confirmPendingDelete(Array.from(pendingDeleteIds));
+    }
+    document.getElementById('undoToast').classList.remove('open');
+  }
+  function confirmPendingDelete(ids) {
+    document.getElementById('undoToast').classList.remove('open');
+    postAction({ action: 'delete', ids: ids })
+      .then(() => {
+        fullEntries = fullEntries.filter((e) => !ids.includes(e.id));
+        ids.forEach((id) => pendingDeleteIds.delete(id));
+        renderCategoryChips();
+        renderFullList();
+        loadStats();
+      })
+      .catch(() => { alert('Не удалось удалить на сервере. Попробуй ещё раз.'); ids.forEach((id) => pendingDeleteIds.delete(id)); renderFullList(); });
+  }
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    clearTimeout(undoTimer);
+    document.getElementById('undoToast').classList.remove('open');
+    pendingDeleteIds.clear();
+    renderFullList();
+  });
+
+  document.getElementById('cancelSelect').addEventListener('click', exitSelectMode);
+  document.getElementById('deleteSelected').addEventListener('click', () => {
+    if (!selectedIds.size) return;
+    const ids = Array.from(selectedIds);
+    const label = 'Удалено записей: ' + ids.length;
+    exitSelectMode();
+    requestDelete(ids, label);
+  });
+
+  /* ---- Экспорт видимых (с учётом фильтра) записей в CSV ---- */
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    if (!fullEntries.length) { alert('Нет данных для экспорта'); return; }
+    const rows = getVisibleEntries();
+    const header = 'Дата;Начало;Конец;Часы;Описание;Категория';
+    const lines = rows.map((e) => [e.date, e.start, e.end, e.hours, csvEscape(e.description), csvEscape(e.category)].join(';'));
+    const csv = header + '\n' + lines.join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM — чтобы Excel верно понял кириллицу
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Дневник_задач_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  function csvEscape(s) {
+    s = (s || '').toString();
+    if (s.indexOf(';') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  /* ======================== ЭКРАН РЕДАКТИРОВАНИЯ ======================== */
+  let editingId = null;
+
+  function openEdit(entry) {
+    editingId = entry.id;
+    document.getElementById('editDesc').value = entry.description || '';
+    document.getElementById('editStart').value = entry.start || '';
+    document.getElementById('editEnd').value = entry.end || '';
+    openOverlay('edit');
+  }
+
+  document.getElementById('saveEdit').addEventListener('click', () => {
+    if (!editingId) return;
+    const payload = {
+      action: 'update',
+      id: editingId,
+      description: document.getElementById('editDesc').value.trim(),
+      start: document.getElementById('editStart').value,
+      end: document.getElementById('editEnd').value
+    };
+    postAction(payload)
+      .then((data) => {
+        if (data.ok) { requestClose(); loadFullList(); loadStats(); }
+        else alert('Ошибка: ' + (data.error || 'не удалось сохранить'));
+      })
+      .catch(() => alert('Нет связи с сервером'));
+  });
+
+  document.getElementById('deleteEdit').addEventListener('click', () => {
+    if (!editingId) return;
+    const id = editingId;
+    requestClose(); // возвращаемся к списку — плашка Undo появится уже там
+    setTimeout(() => requestDelete([id], 'Запись удалена'), 50);
+  });
+
+  /* ======================== СОХРАНЕНИЕ НОВОЙ ЗАПИСИ ======================== */
+  function resetSave() { saveBtn.disabled = false; saveBtn.textContent = 'Записать'; }
+
+  saveBtn.addEventListener('click', () => {
+    const v = txt.value.trim();
+    if (!v) { statusEl.style.color = '#e24b4a'; statusEl.textContent = 'Поле пустое'; return; }
+    if (API_URL.indexOf('ВСТАВЬ_СЮДА') !== -1) {
+      statusEl.style.color = '#e24b4a';
+      statusEl.textContent = 'Сначала настрой API_URL в коде страницы';
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Сохраняю…';
+    statusEl.style.color = 'var(--text-secondary)';
+    statusEl.textContent = '';
+
+    postAction({ action: 'save', text: v })
+      .then((data) => {
+        if (data.ok) {
+          statusEl.style.color = '#639922';
+          statusEl.textContent = data.message || 'Записано ✓';
+          txt.value = '';
+        } else {
+          statusEl.style.color = '#e24b4a';
+          statusEl.textContent = 'Ошибка: ' + (data.error || 'не удалось');
+        }
+        loadStats();
+        resetSave();
+        try { txt.focus(); } catch (e) {}
+      })
+      .catch(() => {
+        // Ответ не дошёл (частая история на мобильной сети), но сама запись
+        // почти наверняка уже сохранилась на сервере — обновляем статистику,
+        // чтобы не пришлось вручную перезагружать страницу для проверки.
+        statusEl.style.color = '#e24b4a';
+        statusEl.textContent = 'Нет ответа от сервера — но запись, скорее всего, уже сохранена, проверяю…';
+        loadStats();
+        resetSave();
+      });
+  });
+
+  /* ======================== SERVICE WORKER ======================== */
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
