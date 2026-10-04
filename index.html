@@ -61,6 +61,7 @@ window.APP_CONFIG = {
 </script>
 <script>(function () {
 "use strict";
+const BUILD = "04.10 12:39";
 /* ===== p1: утилиты, конфиг, состояние, темы, иконки ===== */
 const LSK = { cfg: "mytasks_cfg_v1", theme: "mytasks_theme_v1", cache: "mytasks_cache_v1", pending: "mytasks_pending_v1", view: "mytasks_view_v1", prefs: "mytasks_prefs_v1", notified: "mytasks_notified_v1" };
 const jget = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
@@ -1197,6 +1198,8 @@ const CSS = `
 .pform input[type=number]{width:64px}
 .sw{width:26px;height:26px;border-radius:50%;border:3px solid transparent}
 .ptext{padding:8px 14px;font-size:13px;line-height:1.55;color:var(--tx)}
+.authwrap{position:fixed;left:0;right:0;top:0;bottom:0;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--tx)}
+.authbox{width:min(420px,92vw);margin:0 auto;padding:56px 4px 160px}
 .inp{width:100%;background:var(--inp);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:10px 12px;font-size:inherit}
 .inp:focus{border-color:var(--acc)}
 select.inp option{color:#111}
@@ -1462,22 +1465,21 @@ function settingsHTML() {
     '<div id="msg" style="margin-top:10px;min-height:18px;font-size:13px;color:' + (ui.msgOk ? "#22c55e" : "#f87171") + '">' + esc(ui.msg) + "</div></div></div>";
 }
 const msgHTML = () => '<div id="msg" style="margin-top:12px;min-height:20px;font-size:13.5px;color:' + (ui.msgOk ? "#16a34a" : "#dc2626") + '">' + esc(ui.msg) + "</div>";
-let authShown = false;
 function authHTML() {
-  const fd = authShown ? "" : "fade"; authShown = true;
-  return '<div style="margin:auto;width:min(420px,92vw);padding:24px" class="' + fd + '"><div style="font-size:1.9em;font-weight:700">Мои дела</div>' +
+  return '<div class="authwrap"><div class="authbox"><div style="font-size:1.9em;font-weight:700">Мои дела</div>' +
     '<div style="margin:4px 0 16px;font-size:14px;color:var(--sub)">Войдите — задачи будут одинаковыми на телефоне и компьютере</div>' +
     '<form id="authform"><input id="a-email" class="inp" type="email" autocomplete="username" placeholder="Почта" style="margin-bottom:8px">' +
     '<input id="a-pass" class="inp" type="password" autocomplete="current-password" placeholder="Пароль (минимум 6 символов)" style="margin-bottom:12px">' +
     '<div style="display:flex;gap:8px"><button type="button" class="btn" data-a="login" style="flex:1">Войти</button><button type="button" class="btn ghost" data-a="signup" style="flex:1">Создать аккаунт</button></div><button type="submit" hidden></button></form>' +
-    msgHTML() + '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-a="ping">📡 Проверить связь</button>' + (cfg.baked ? "" : '<button class="btn ghost" data-a="resetcfg">Сменить подключение</button>') + "</div></div>";
+    msgHTML() + '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-a="ping">📡 Проверить связь</button>' + (cfg.baked ? "" : '<button class="btn ghost" data-a="resetcfg">Сменить подключение</button>') + '</div>' +
+    '<div style="margin-top:18px;font-size:11px;color:var(--sub);opacity:.7">сборка ' + BUILD + "</div></div></div>";
 }
 function setupHTML() {
-  return '<div style="margin:auto;width:min(520px,92vw);padding:24px" class="fade"><div style="font-size:1.9em;font-weight:700">Подключение к облаку</div>' +
+  return '<div class="authwrap"><div class="authbox" style="width:min(520px,92vw)"><div style="font-size:1.9em;font-weight:700">Подключение к облаку</div>' +
     '<div style="margin:6px 0 14px;font-size:13.5px;line-height:1.5;color:var(--sub)">Supabase → ваш проект → Project Settings → API Keys. Скопируйте <b>Project URL</b> (адрес вида https://xxxx.supabase.co) и <b>публичный</b> ключ (anon / publishable). Секретный ключ (service_role / secret) сюда вставлять НЕЛЬЗЯ.</div>' +
     '<input id="c-url" class="inp" placeholder="https://xxxxxxxx.supabase.co" style="margin-bottom:8px" value="' + esc(cfg.url) + '">' +
     '<input id="c-key" class="inp" placeholder="anon / publishable ключ" style="margin-bottom:12px" value="' + esc(cfg.key) + '">' +
-    '<div style="display:flex;gap:8px"><button class="btn" data-a="savecfg" style="flex:1">Сохранить</button><button class="btn ghost" data-a="ping">📡 Проверить связь</button></div>' + msgHTML() + "</div>";
+    '<div style="display:flex;gap:8px"><button class="btn" data-a="savecfg" style="flex:1">Сохранить</button><button class="btn ghost" data-a="ping">📡 Проверить связь</button></div>' + msgHTML() + "</div></div>";
 }
 function showMsg(text, ok) { ui.msg = text; ui.msgOk = ok; const el = $("msg"); if (el) { el.textContent = text; el.style.color = ok ? "#16a34a" : "#dc2626"; } }
 
